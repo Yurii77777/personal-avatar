@@ -1,0 +1,8 @@
+{
+  "name": "personal-avatar",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "web-client"
+  ]
+}
