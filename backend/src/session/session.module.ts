@@ -8,5 +8,6 @@ import { LlmModule } from '../llm/llm.module';
   imports: [RagModule, LlmModule],
   controllers: [SessionController],
   providers: [SessionService],
+  exports: [SessionService],
 })
 export class SessionModule {}

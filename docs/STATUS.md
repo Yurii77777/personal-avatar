@@ -1,6 +1,6 @@
 # Project Status
 
-**Last updated**: 2026-02-25
+**Last updated**: 2026-03-05
 
 ## Current phase: 1 — Foundation + Text Pipeline (COMPLETE)
 
@@ -30,8 +30,9 @@
 - `drizzle.config.ts` — schema push config (no migration files, uses `drizzle-kit push`)
 
 **Monorepo**
-- Root `package.json` — npm workspaces: `backend`, `web-client`
-- `web-client` workspace declared but not yet created
+- pnpm workspaces (`pnpm-workspace.yaml`): `backend`, `web-client`, `packages/*`
+- `packages/shared` (`@avatar/shared`) — shared TypeScript types (voice event interfaces), no build step (raw TS via exports)
+- `web-client` workspace — Svelte 5 voice testing UI (Vite + TypeScript)
 
 ### API endpoints
 
@@ -61,13 +62,30 @@ session_messages (id, session_id, role[user|assistant], content, created_at)
 
 ---
 
-## Not started
+## Phase 2: Voice Pipeline — STT + TTS (COMPLETE)
 
-### Phase 2: Voice Pipeline — STT + TTS
-- Deepgram streaming STT (WebSocket gateway)
-- Chatterbox TTS on RunPod Serverless
-- Voice clone setup
-- Audio format conversion utilities
+**Backend modules:**
+- `audio/` — AudioService with WAV/PCM utilities (pcmToWav, wavToPcm, base64 conversion, metadata parsing)
+- `tts/` — TTS strategy pattern: TtsProvider interface → ElevenLabsTtsProvider (API, 30s timeout, PCM 24kHz output)
+- `stt/` — SttService wraps @deepgram/sdk for streaming transcription; SttGateway WebSocket on `/voice` namespace
+
+**TTS pivot:** Originally planned RunPod + Chatterbox (self-hosted GPU). Switched to ElevenLabs API — no GPU infra needed, built-in voice cloning, free tier for testing, lower latency (~1-2s vs 30-60s cold start).
+
+**WebSocket flow (Socket.IO `/voice` namespace):**
+1. Client sends `start-session` → server creates Deepgram live session
+2. Client streams `audio-chunk` (raw PCM binary) → forwarded to Deepgram
+3. Server emits `transcript` (interim/final) in real-time
+4. On utterance end → joins final transcripts → calls SessionService.ask() → emits text `answer`
+5. After answer: calls TtsService.synthesize() → emits `audio` (base64 WAV)
+6. TTS failure → graceful degradation: text answer already delivered, emits `tts-error`
+
+**New dependencies:** `@deepgram/sdk`, `@nestjs/websockets`, `@nestjs/platform-socket.io`, `socket.io`
+
+**Web client:** Migrated from Vanilla TS to **Svelte 5** (runes, scoped CSS, Vite plugin). Pure logic files (`voice-client.ts`, `audio-recorder.ts`, `pcm-processor.ts`) moved to `src/lib/`. Imperative DOM code (`ui.ts`, `audio-player.ts`) replaced with reactive `App.svelte`.
+
+---
+
+## Not started
 
 ### Phase 3: Avatar — Lip Sync + Visual
 - MuseTalk 1.5 avatar worker on RunPod
@@ -109,7 +127,11 @@ session_messages (id, session_id, role[user|assistant], content, created_at)
   "marked": "^17.0.3",
   "@langchain/textsplitters": "^1.0.1",
   "pdf-parse": "^1.1.1",
-  "postgres": "^3.4.5"
+  "postgres": "^3.4.5",
+  "@deepgram/sdk": "^4.11.3",
+  "@nestjs/websockets": "^11.1.14",
+  "@nestjs/platform-socket.io": "^11.1.14",
+  "socket.io": "^4.8.3"
 }
 ```
 
@@ -124,3 +146,9 @@ session_messages (id, session_id, role[user|assistant], content, created_at)
 | `ANTHROPIC_MODEL` | `claude-haiku-4-5-20241022` | No |
 | `GEMINI_API_KEY` | — | When `LLM_PROVIDER=gemini` |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | No |
+| `DEEPGRAM_API_KEY` | — | For voice pipeline |
+| `DEEPGRAM_MODEL` | `nova-3` | No |
+| `DEEPGRAM_LANGUAGE` | `en` | No |
+| `ELEVENLABS_API_KEY` | — | For TTS |
+| `ELEVENLABS_VOICE_ID` | — | Cloned voice ID |
+| `ELEVENLABS_MODEL` | `eleven_multilingual_v2` | No |

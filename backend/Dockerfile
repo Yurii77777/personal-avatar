@@ -1,17 +1,29 @@
 FROM node:22-slim AS builder
 
+RUN corepack enable pnpm
+
 WORKDIR /app
-COPY package.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+
+# Copy workspace manifests for dependency caching
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY backend/package.json backend/
+COPY packages/shared/package.json packages/shared/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy source
+COPY packages/shared/ packages/shared/
+COPY backend/ backend/
+
+RUN pnpm --filter personal-avatar-backend run build
+RUN pnpm --filter personal-avatar-backend deploy --prod --legacy /prod
 
 FROM node:22-slim
 
 WORKDIR /app
-COPY --from=builder --chown=node:node /app/dist ./dist
-COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/package.json ./
+COPY --from=builder --chown=node:node /prod/node_modules ./node_modules
+COPY --from=builder --chown=node:node /prod/package.json ./
+COPY --from=builder --chown=node:node /app/backend/dist ./dist
 
 USER node
 EXPOSE 3000
