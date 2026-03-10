@@ -18,8 +18,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "${PORT:-3000}:3000"
     environment:
@@ -29,6 +29,12 @@ services:
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-haiku-4-5-20241022}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      DEEPGRAM_MODEL: ${DEEPGRAM_MODEL:-nova-3}
+      DEEPGRAM_LANGUAGE: ${DEEPGRAM_LANGUAGE:-en}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
+      ELEVENLABS_MODEL: ${ELEVENLABS_MODEL:-eleven_multilingual_v2}
       PORT: 3000
     depends_on:
       db:

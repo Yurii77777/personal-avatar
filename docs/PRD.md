@@ -173,7 +173,7 @@ TOTAL до першого слова       ~1.03 сек      прийнятно
 
 ### 3.1 Чому TypeScript (Node.js) — єдиний стек
 
-Весь проєкт на **TypeScript**: backend (NestJS) + web client (React або Vanilla TS). Переваги:
+Весь проєкт на **TypeScript**: backend (NestJS) + web client (Svelte 5). Переваги:
 - **Один стек** — без контекст-свічингу між мовами
 - **Нативний WebSocket/WebRTC** — Node.js створений для real-time streaming
 - **Web App = кросплатформна з коробки** — працює у будь-якому браузері, нічого встановлювати
@@ -186,9 +186,9 @@ TOTAL до першого слова       ~1.03 сек      прийнятно
 - **Чому**: Модульна архітектура, вбудований WebSocket Gateway, DI-контейнер, serve static для Web App
 - **Альтернативи відхилені**: Express (немає структури), Fastify (менш зрілий DI), FastAPI/Python (два стеки замість одного)
 
-#### Web Client: React або Vanilla TS
-- **Чому**: Кросплатформний з коробки (Chrome, Firefox, Safari), не потрібно нічого встановлювати, Browser APIs для audio/video
-- **Альтернативи відхилені**: Electron (потрібно встановлювати окремий додаток, зайва складність)
+#### Web Client: Svelte 5
+- **Чому**: Мінімальний bundle (компілятор, не runtime), Svelte 5 runes для реактивного стану без boilerplate, scoped CSS з коробки, Vite-нативний, Browser APIs для audio/video
+- **Альтернативи відхилені**: React (зайвий runtime для невеликого UI), Vanilla TS (не масштабується на Фази 3-5), Electron (потрібно встановлювати окремий додаток)
 - **Ключові Browser APIs**: `getDisplayMedia()` (system audio capture), `RTCPeerConnection` (WebRTC), `<canvas>` (video render), `AudioContext` (audio processing)
 
 #### STT: Deepgram Nova-3
@@ -230,7 +230,7 @@ TOTAL до першого слова       ~1.03 сек      прийнятно
 
 | Шар | Технологія | Ліцензія | Вартість |
 |-----|-----------|----------|----------|
-| Web Client | React / Vanilla TS (Browser) | MIT | Безкоштовно |
+| Web Client | Svelte 5 (Vite + TypeScript) | MIT | Безкоштовно |
 | Virtual Camera | OBS Studio (Window Capture) | GPLv2 | Безкоштовно |
 | Virtual Audio | BlackHole / PulseAudio / VB-Cable | Open Source | Безкоштовно |
 | Backend | Node.js 22 + NestJS 11 | MIT | Безкоштовно |
@@ -393,21 +393,24 @@ backend/src/
 web-client/
 ├── package.json
 ├── tsconfig.json
-├── vite.config.ts                     # Vite для dev + build
+├── svelte.config.js
+├── vite.config.ts                     # Vite + svelte() plugin
 ├── index.html
 ├── src/
-│   ├── main.ts                        # Entry point
-│   ├── services/
-│   │   ├── webrtc-client.ts           # WebRTC receiver
-│   │   ├── audio-capture.ts           # getDisplayMedia() system audio
-│   │   ├── websocket-client.ts        # WebSocket для audio streaming
-│   │   └── session-manager.ts         # Session control UI
+│   ├── main.ts                        # Svelte mount entry point
+│   ├── app.css                        # Global styles (reset, body)
+│   ├── App.svelte                     # Main app (voice UI)
 │   ├── components/
-│   │   ├── avatar-canvas.ts           # <canvas> avatar renderer
-│   │   ├── session-controls.ts        # Start/stop/status UI
-│   │   └── setup-guide.ts             # OBS + Virtual Audio setup guide
-│   └── styles/
-│       └── main.css
+│   │   ├── AvatarCanvas.svelte        # <canvas> avatar renderer
+│   │   ├── SessionControls.svelte     # Start/stop/status UI
+│   │   └── SetupGuide.svelte          # OBS + Virtual Audio setup guide
+│   └── lib/
+│       ├── voice-client.ts            # Socket.IO wrapper
+│       ├── audio-recorder.ts          # Mic → AudioWorklet → PCM
+│       ├── pcm-processor.ts           # AudioWorklet processor
+│       ├── webrtc-client.ts           # WebRTC receiver
+│       ├── audio-capture.ts           # getDisplayMedia() system audio
+│       └── session-manager.ts         # Session lifecycle
 └── README.md
 
 scripts/
@@ -455,15 +458,15 @@ backend/src/
     └── session.controller.ts          # POST /start, /stop, GET /status
 
 web-client/src/
-├── services/
-│   ├── audio-capture.ts               # getDisplayMedia() system audio
-│   ├── websocket-client.ts            # Audio → server
-│   ├── webrtc-client.ts               # Avatar video+audio ← server
-│   └── session-manager.ts             # Session lifecycle
-└── components/
-    ├── avatar-canvas.ts               # Full-screen canvas для OBS capture
-    ├── session-controls.ts            # Start/stop UI
-    └── setup-guide.ts                 # Per-OS setup інструкції
+├── App.svelte                         # Main app component
+├── components/
+│   ├── AvatarCanvas.svelte            # Full-screen canvas для OBS capture
+│   ├── SessionControls.svelte         # Start/stop UI
+│   └── SetupGuide.svelte              # Per-OS setup інструкції
+└── lib/
+    ├── audio-capture.ts               # getDisplayMedia() system audio
+    ├── webrtc-client.ts               # Avatar video+audio ← server
+    └── session-manager.ts             # Session lifecycle
 ```
 
 **Acceptance criteria:**
@@ -523,10 +526,10 @@ backend/src/
 
 web-client/src/
 ├── pages/
-│   ├── dashboard.ts                   # Головна панель
-│   ├── knowledge.ts                   # Управління базою знань
-│   ├── avatar-setup.ts               # Налаштування аватара + голосу
-│   └── session.ts                     # Запуск та моніторинг сесій
+│   ├── Dashboard.svelte               # Головна панель
+│   ├── Knowledge.svelte               # Управління базою знань
+│   ├── AvatarSetup.svelte             # Налаштування аватара + голосу
+│   └── Session.svelte                 # Запуск та моніторинг сесій
 
 scripts/deploy.sh                      # Automated deployment
 ```
@@ -615,29 +618,32 @@ personal-avatar/
 │       ├── llm.service.spec.ts
 │       └── orchestrator.service.spec.ts
 │
-├── web-client/                          # Web App (browser-based, Vite + TypeScript)
+├── web-client/                          # Web App (Svelte 5 + Vite + TypeScript)
 │   ├── package.json
 │   ├── tsconfig.json
+│   ├── svelte.config.js
 │   ├── vite.config.ts
 │   ├── index.html
 │   ├── src/
-│   │   ├── main.ts                      # Entry point
-│   │   ├── services/
-│   │   │   ├── webrtc-client.ts         # WebRTC receiver (avatar video+audio)
-│   │   │   ├── audio-capture.ts         # getDisplayMedia() system audio
-│   │   │   ├── websocket-client.ts      # Audio stream → server
-│   │   │   └── session-manager.ts       # Session lifecycle control
+│   │   ├── main.ts                      # Svelte mount entry point
+│   │   ├── app.css                      # Global styles (reset, body)
+│   │   ├── App.svelte                   # Main app component
 │   │   ├── components/
-│   │   │   ├── avatar-canvas.ts         # <canvas> avatar renderer
-│   │   │   ├── session-controls.ts      # Start/stop/status UI
-│   │   │   └── setup-guide.ts           # Per-OS OBS + Audio setup guide
+│   │   │   ├── AvatarCanvas.svelte      # <canvas> avatar renderer
+│   │   │   ├── SessionControls.svelte   # Start/stop/status UI
+│   │   │   └── SetupGuide.svelte        # Per-OS OBS + Audio setup guide
 │   │   ├── pages/                       # (Фаза 5)
-│   │   │   ├── dashboard.ts
-│   │   │   ├── knowledge.ts
-│   │   │   ├── avatar-setup.ts
-│   │   │   └── session.ts
-│   │   └── styles/
-│   │       └── main.css
+│   │   │   ├── Dashboard.svelte
+│   │   │   ├── Knowledge.svelte
+│   │   │   ├── AvatarSetup.svelte
+│   │   │   └── Session.svelte
+│   │   └── lib/
+│   │       ├── voice-client.ts          # Socket.IO wrapper
+│   │       ├── audio-recorder.ts        # Mic → AudioWorklet → PCM
+│   │       ├── pcm-processor.ts         # AudioWorklet processor
+│   │       ├── webrtc-client.ts         # WebRTC receiver
+│   │       ├── audio-capture.ts         # getDisplayMedia() system audio
+│   │       └── session-manager.ts       # Session lifecycle
 │   └── README.md
 │
 ├── gpu-workers/                         # RunPod serverless workers (Python)

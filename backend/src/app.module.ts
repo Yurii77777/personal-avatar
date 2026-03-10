@@ -7,6 +7,9 @@ import { RagModule } from './rag/rag.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { LlmModule } from './llm/llm.module';
 import { SessionModule } from './session/session.module';
+import { AudioModule } from './audio/audio.module';
+import { TtsModule } from './tts/tts.module';
+import { SttModule } from './stt/stt.module';
 
 @Module({
   imports: [
@@ -16,6 +19,9 @@ import { SessionModule } from './session/session.module';
     KnowledgeModule,
     LlmModule,
     SessionModule,
+    AudioModule,
+    TtsModule,
+    SttModule,
   ],
   controllers: [HealthController],
 })
